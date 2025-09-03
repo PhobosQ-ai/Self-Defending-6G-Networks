@@ -89,9 +89,9 @@ where $\hat{x}$ is sampled uniformly on straight lines between real and generate
 
 Generator loss (Wasserstein style) typically minimizes the negative critic score:
 
-
 $$
 L_G = -\mathbb{E}_{z\sim p_z}[D(G(z,y),y)]
+$$
 $$
 
 ### 3) Adversarial feedback (attack-driven fine-tuning)
