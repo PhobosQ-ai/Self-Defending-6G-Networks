@@ -21,11 +21,10 @@ The framework provides a proactive security mechanism for 6G networks using thre
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd py-files
+   git clone <https://github.com/PhobosQ-ai/Self-Defending-6G-Networks>
    ```
 
-# Self-Defending 6G Networks — Adaptive Decoy Generation (Math-enabled README)
+# Self-Defending 6G Networks — Adaptive Decoy Generation
 
 This folder contains the simulation code that implements the Adaptive Decoy Generation framework described in the paper "Self-Defending 6G Networks Through AI-Driven Adaptive Decoy Generation at the Edge".
 
@@ -59,7 +58,7 @@ python main.py
 - Federated Learning (FedAvg-like) synchronization across distributed edge nodes.
 - Data loading, preprocessing, plotting utilities and a simulation harness.
 
-## Mathematical details (rendered in TeX-aware Markdown)
+## Details
 
 Below are the key equations and loss functions referenced in the implementation and paper. Put simply, these are the formal contracts that guide training and synchronization.
 
