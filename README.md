@@ -67,10 +67,8 @@ Below are the key equations and loss functions referenced in the implementation 
 
 The canonical conditional GAN objective used to train generator G and discriminator D (conditioned on y) is:
 
-
 $$
-\min_G \max_D \; \mathbb{E}_{x\sim p_{\text{data}},\,y\sim p_y}[\log D(x,y)] \\
-\quad + \mathbb{E}_{z\sim p_z,\,y\sim p_y}[\log(1 - D(G(z,y),y))]
+\min_G \max_D \mathbb{E}_{x\sim p_{\text{data}}, y\sim p_y} [\log D(x,y)] + \mathbb{E}_{z\sim p_z, y\sim p_y} [\log (1 - D(G(z,y),y))]
 $$
 
 In practice we use a stabilized variant (WGAN-GP) for improved training stability.
@@ -79,10 +77,8 @@ In practice we use a stabilized variant (WGAN-GP) for improved training stabilit
 
 Using the Wasserstein loss with gradient penalty (coefficient $\lambda$):
 
-
 $$
-L_D = \mathbb{E}_{\tilde{x} \sim p_g}[D(\tilde{x},y)] - \mathbb{E}_{x\sim p_{\text{data}}}[D(x,y)] \\
-\quad + \lambda\,\mathbb{E}_{\hat{x}\sim p_{\hat{x}}}\big[ (\|\nabla_{\hat{x}} D(\hat{x},y)\|_2 - 1)^2 \big]
+L_D = \mathbb{E}_{\tilde{x} \sim p_g} [D(\tilde{x},y)] - \mathbb{E}_{x \sim p_{\text{data}}} [D(x,y)] + \lambda \mathbb{E}_{\hat{x} \sim p_{\hat{x}}} \big[ (\|\nabla_{\hat{x}} D(\hat{x},y)\|_2 - 1)^2 \big]
 $$
 
 where $\hat{x}$ is sampled uniformly on straight lines between real and generated samples.
@@ -97,7 +93,6 @@ $$
 ### 3) Adversarial feedback (attack-driven fine-tuning)
 
 When attack interaction data $\mathcal{D}_{\text{attack}}$ is available, the generator fine-tuning loss term used in the paper is:
-
 
 $$
 \mathcal{L}_{\text{attack}} = \mathbb{E}_{x_{\text{attack}}\sim\mathcal{D}_{\text{attack}}} \Big[ \min_{z} \| G(z, y_{\text{context}}) - x_{\text{attack}} \|_2^2 \Big]
