@@ -1,21 +1,30 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
-import logging
 
-logger = logging.getLogger(__name__)
+class RolloutBuffer:
+    def __init__(self):
+        self.actions = []
+        self.states = []
+        self.logprobs = []
+        self.rewards = []
+        self.is_terminals = []
+
+    def clear(self):
+        del self.actions[:]
+        del self.states[:]
+        del self.logprobs[:]
+        del self.rewards[:]
+        del self.is_terminals[:]
 
 class PPOAgent:
-    """
-    PPO Agent for dynamic decoy management.
-    The policy decides actions like 'increase decoy density' or 'change decoy type'.
-    Implements the Proximal Policy Optimization algorithm as described in the paper.
-    """
     def __init__(self, state_dim: int, action_dim: int, lr_actor: float, lr_critic: float, gamma: float, K_epochs: int, eps_clip: float, device: torch.device):
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         self.device = device
+
+        self.buffer = RolloutBuffer()
 
         self.actor = nn.Sequential(
             nn.Linear(state_dim, 64),
@@ -32,11 +41,9 @@ class PPOAgent:
             nn.Tanh(),
             nn.Linear(64, 1)
         ).to(device)
-        
         self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=lr_actor)
         self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=lr_critic)
-        
-        self.buffer = []
+        self.MseLoss = nn.MSELoss()
 
     def select_action(self, state) -> int:
         with torch.no_grad():
@@ -44,19 +51,45 @@ class PPOAgent:
             action_probs = self.actor(state)
             dist = Categorical(action_probs)
             action = dist.sample()
-            self.buffer.append((state, action, dist.log_prob(action)))
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(dist.log_prob(action))
         return action.item()
 
     def update(self):
-        """
-        Updates the actor and critic networks using the PPO algorithm.
-        This is a simplified implementation; in practice, use the full PPO with advantages and clipping.
-        """
-        if not self.buffer:
-            logger.warning("Buffer is empty, skipping update.")
+        if not self.buffer.actions:
             return
-        
-        logger.info("PPO Agent updating policy based on recent interactions...")
-        
-        
-        self.buffer = []
+        rewards = []
+        discounted_reward = 0
+        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
+            if is_terminal:
+                discounted_reward = 0
+            discounted_reward = reward + (self.gamma * discounted_reward)
+            rewards.insert(0, discounted_reward)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
+        for _ in range(self.K_epochs):
+            logprobs, state_values, dist_entropy = self.evaluate(old_states, old_actions)
+            state_values = torch.squeeze(state_values)
+            ratios = torch.exp(logprobs - old_logprobs.detach())
+            advantages = rewards - state_values.detach()   
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            self.optimizer_actor.zero_grad()
+            self.optimizer_critic.zero_grad()
+            loss.mean().backward()
+            self.optimizer_actor.step()
+            self.optimizer_critic.step()
+        self.buffer.clear()
+
+    def evaluate(self, state, action):
+        action_probs = self.actor(state)
+        dist = Categorical(action_probs)
+        action_logprobs = dist.log_prob(action)
+        dist_entropy = dist.entropy()
+        state_values = self.critic(state)
+        return action_logprobs, state_values, dist_entropy

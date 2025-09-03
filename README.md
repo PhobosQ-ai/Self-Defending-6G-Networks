@@ -35,8 +35,7 @@ This README includes the core mathematical expressions used by the implementatio
 1. Clone the repository and change into the python folder:
 
 ```bash
-git clone <repository-url>
-cd "c:\PhobosQ - docs\latex docs\6g files\py files"
+git clone <https://github.com/PhobosQ-ai/Self-Defending-6G-Networks>
 ```
 
 2. Install dependencies:
